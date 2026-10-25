@@ -1,26 +1,359 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Streamdown renders with Tailwind utilities of its own; Tailwind only emits
+   them when it scans these files. */
+@source "../node_modules/streamdown/dist/*.js";
+@source "../node_modules/@streamdown/code/dist/*.js";
+@source "../node_modules/@streamdown/mermaid/dist/*.js";
+@source "../node_modules/@streamdown/math/dist/*.js";
+@source "../node_modules/@streamdown/cjk/dist/*.js";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  /* The AI accent and the severity scale, as Tailwind colours
+     (bg-ai-from, text-severity-critical, …). */
+  --color-ai-from: var(--ai-from);
+  --color-ai-to: var(--ai-to);
+  --color-ai-from-strong: var(--ai-from-strong);
+  --color-ai-to-strong: var(--ai-to-strong);
+  --color-severity-critical: var(--severity-critical);
+  --color-severity-high: var(--severity-high);
+  --color-severity-medium: var(--severity-medium);
+  --color-severity-low: var(--severity-low);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Light: a violet-tinted canvas washed violet → cyan (the radial wash sits on
+   the inset, below), cards a step brighter than the canvas, and a vivid violet
+   primary. The AI accent sweeps violet → cyan; the `-strong` stops are the
+   same sweep, dark enough for white text (AA). Severity colours are for
+   severity only. */
+:root {
+  --background: oklch(0.975 0.012 292);
+  --foreground: oklch(0.19 0.04 290);
+  --card: oklch(0.995 0.004 290);
+  --card-foreground: oklch(0.19 0.04 290);
+  --popover: oklch(0.995 0.004 290);
+  --popover-foreground: oklch(0.19 0.04 290);
+  --primary: oklch(0.5 0.24 298);
+  --primary-foreground: oklch(0.985 0.005 290);
+  --secondary: oklch(0.945 0.025 292);
+  --secondary-foreground: oklch(0.3 0.06 290);
+  --muted: oklch(0.945 0.02 290);
+  --muted-foreground: oklch(0.47 0.045 290);
+  --accent: oklch(0.925 0.05 292);
+  --accent-foreground: oklch(0.3 0.12 292);
+  --destructive: oklch(0.55 0.23 27);
+  --border: oklch(0.86 0.025 290);
+  --input: oklch(0.86 0.025 290);
+  --ring: oklch(0.6 0.2 292);
+  --chart-1: oklch(0.55 0.22 295);
+  --chart-2: oklch(0.7 0.15 205);
+  --chart-3: oklch(0.68 0.2 340);
+  --chart-4: oklch(0.78 0.16 80);
+  --chart-5: oklch(0.6 0.14 250);
+  --radius: 0.75rem;
+  /* The sidebar and the shell header share --sidebar. */
+  --sidebar: oklch(0.955 0.025 292);
+  --sidebar-foreground: oklch(0.24 0.04 290);
+  --sidebar-primary: oklch(0.5 0.24 298);
+  --sidebar-primary-foreground: oklch(0.985 0.005 290);
+  --sidebar-accent: oklch(0.9 0.05 292);
+  --sidebar-accent-foreground: oklch(0.26 0.1 292);
+  --sidebar-border: oklch(0.88 0.03 290);
+  --sidebar-ring: oklch(0.6 0.2 292);
+  --ai-from: oklch(0.6 0.24 300);
+  --ai-to: oklch(0.72 0.15 205);
+  --ai-from-strong: oklch(0.5 0.24 298);
+  --ai-to-strong: oklch(0.5 0.14 215);
+  --severity-critical: oklch(0.58 0.22 25);
+  --severity-high: oklch(0.68 0.19 45);
+  --severity-medium: oklch(0.78 0.16 80);
+  --severity-low: oklch(0.62 0.1 245);
+}
+
+/* Dark: a deep indigo canvas, the sidebar a step darker, brighter gradient
+   accents; the `-strong` stops carry the dark primary foreground (AA). */
+.dark {
+  --background: oklch(0.15 0.03 282);
+  --foreground: oklch(0.955 0.012 290);
+  --card: oklch(0.205 0.035 283);
+  --card-foreground: oklch(0.955 0.012 290);
+  --popover: oklch(0.205 0.035 283);
+  --popover-foreground: oklch(0.955 0.012 290);
+  --primary: oklch(0.8 0.15 295);
+  --primary-foreground: oklch(0.16 0.04 290);
+  --secondary: oklch(0.26 0.04 283);
+  --secondary-foreground: oklch(0.955 0.012 290);
+  --muted: oklch(0.26 0.04 283);
+  --muted-foreground: oklch(0.72 0.04 290);
+  --accent: oklch(0.3 0.07 290);
+  --accent-foreground: oklch(0.96 0.01 290);
+  --destructive: oklch(0.72 0.19 22);
+  --border: oklch(1 0 0 / 15%);
+  --input: oklch(1 0 0 / 20%);
+
+  --ring: oklch(0.72 0.16 295);
+  --chart-1: oklch(0.76 0.17 295);
+  --chart-2: oklch(0.8 0.14 205);
+  --chart-3: oklch(0.76 0.18 340);
+  --chart-4: oklch(0.83 0.15 80);
+  --chart-5: oklch(0.7 0.12 250);
+  --sidebar: oklch(0.125 0.03 285);
+  --sidebar-foreground: oklch(0.93 0.012 290);
+  --sidebar-primary: oklch(0.8 0.15 295);
+  --sidebar-primary-foreground: oklch(0.16 0.04 290);
+  --sidebar-accent: oklch(0.25 0.06 290);
+  --sidebar-accent-foreground: oklch(0.96 0.01 290);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.72 0.16 295);
+  --ai-from: oklch(0.74 0.2 300);
+  --ai-to: oklch(0.82 0.14 205);
+  --ai-from-strong: oklch(0.72 0.2 300);
+  --ai-to-strong: oklch(0.8 0.14 210);
+  --severity-critical: oklch(0.68 0.2 25);
+  --severity-high: oklch(0.75 0.17 50);
+  --severity-medium: oklch(0.84 0.15 85);
+  --severity-low: oklch(0.72 0.1 245);
+}
+
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* The AI gradient, as a fill. */
+  .ai-gradient {
+    background-image: linear-gradient(120deg, var(--ai-from), var(--ai-to));
+  }
+  /* The AI gradient at the strength that carries primary-foreground text:
+     the primary button, the brand tile. */
+  .ai-gradient-strong {
+    background-image: linear-gradient(120deg, var(--ai-from-strong), var(--ai-to-strong));
+  }
+  /* A 1px gradient edge that follows the element's own border-radius: a
+     masked pseudo-element, so it works on any rounded-* surface and needs
+     no wrapper. The element is positioned unless it already is. */
+  :where(.ai-edge) {
+    position: relative;
+  }
+  .ai-edge::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, color-mix(in oklch, var(--ai-from) 55%, transparent), color-mix(in oklch, var(--ai-to) 55%, transparent));
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+  /* The AI gradient, as text. */
+  .ai-text-gradient {
+    background-image: linear-gradient(120deg, var(--ai-from), var(--ai-to));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* A soft ambient glow behind AI-produced content. */
+  .ai-glow {
+    position: absolute;
+    inset: -24px;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(50% 120% at 20% 50%, color-mix(in oklch, var(--ai-from) 45%, transparent), transparent 70%),
+      radial-gradient(50% 120% at 80% 50%, color-mix(in oklch, var(--ai-to) 45%, transparent), transparent 70%);
+    filter: blur(48px);
+    opacity: 0.45;
+  }
+  .dark .ai-glow {
+    opacity: 0.32;
+  }
+  /* The glowing orb: AI is working. */
+  .ai-orb {
+    border-radius: 9999px;
+    background:
+      radial-gradient(circle at 32% 28%, color-mix(in oklch, white 65%, transparent), transparent 40%),
+      linear-gradient(135deg, var(--ai-from), var(--ai-to));
+    box-shadow: 0 6px 20px -4px color-mix(in oklch, var(--ai-to) 60%, transparent);
+    animation: ai-orb-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes ai-orb-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    50% {
+      transform: scale(1.08);
+      filter: brightness(1.15);
+    }
+  }
+  /* Rows entering a list: a short rise, staggered by --i. */
+  .row-enter {
+    animation: row-enter 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 16ms);
+  }
+  @keyframes row-enter {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ai-orb,
+    .row-enter {
+      animation: none;
+    }
+  }
+}
+
+/* The frame. The sidebar and the shell header sit flat on --sidebar; the
+   page sits on a soft violet → cyan radial wash over the canvas. */
+[data-slot="sidebar-inset"] {
+  background-image:
+    radial-gradient(70% 55% at 0% 0%, color-mix(in oklch, var(--ai-from) 16%, transparent), transparent 70%),
+    radial-gradient(60% 55% at 100% 100%, color-mix(in oklch, var(--ai-to) 16%, transparent), transparent 70%);
+}
+.dark [data-slot="sidebar-inset"] {
+  background-image:
+    radial-gradient(70% 55% at 0% 0%, color-mix(in oklch, var(--ai-from) 14%, transparent), transparent 70%),
+    radial-gradient(60% 55% at 100% 100%, color-mix(in oklch, var(--ai-to) 12%, transparent), transparent 70%);
+}
+
+/* The primary button on the strong gradient; hover brightens it since its
+   background colour sits under the image. */
+[data-slot="button"][data-variant="default"] {
+  background-image: linear-gradient(120deg, var(--ai-from-strong), var(--ai-to-strong));
+}
+[data-slot="button"][data-variant="default"]:hover {
+  filter: brightness(1.08);
+}
+
+/* A day in the sidebar calendar that has summaries carries a dot in the
+   colour of its worst severity (modifiersClassNames in date-nav.tsx). */
+.day-has-summaries [data-day]::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  transform: translateX(-50%);
+  background: var(--day-dot, var(--muted-foreground));
+}
+.day-critical {
+  --day-dot: var(--severity-critical);
+}
+.day-high {
+  --day-dot: var(--severity-high);
+}
+.day-medium {
+  --day-dot: var(--severity-medium);
+}
+.day-low {
+  --day-dot: var(--severity-low);
+}
+[data-selected-single="true"]::after,
+[data-range-start="true"]::after,
+[data-range-end="true"]::after {
+  background: var(--primary-foreground) !important;
+}
+
+/* Markdown tables as clean dividers rather than a card, unlayered so they win
+   over Streamdown's own utilities. */
+[data-streamdown="table-wrapper"] {
+  margin: 1.25rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+[data-streamdown="table"] {
+  width: 100%;
+  border: 0;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+[data-streamdown="table-header-cell"] {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  padding: 0.5rem 0.875rem;
+  text-align: left;
+  font-weight: 600;
+}
+[data-streamdown="table-cell"] {
+  border: 0;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 55%, transparent);
+  padding: 0.5rem 0.875rem;
+  vertical-align: top;
+}
+[data-streamdown="table-row"]:last-child [data-streamdown="table-cell"] {
+  border-bottom: 0;
 }

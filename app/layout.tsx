@@ -3,8 +3,18 @@ import type { Metadata } from "next";
 // with the app, so nothing is fetched from Google at build or run time.
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+
+// The wordmark's rounded face, from Fontsource's npm package: bundled like
+// Geist, so nothing is fetched at build or run time.
+const fredoka = localFont({
+  src: "../node_modules/@fontsource-variable/fredoka/files/fredoka-latin-wght-normal.woff2",
+  variable: "--font-fredoka",
+  weight: "300 700",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Slopshop",
@@ -14,7 +24,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable} ${fredoka.variable} h-full antialiased`}>
+
       <body className="flex min-h-full flex-col">
         <Providers>{children}</Providers>
       </body>

@@ -47,13 +47,15 @@ token; the UI talks to the gateway. The gateway's CORS allowlist includes
 | `components/topics/` | the topics page's components: `TopicsView`, `TopicList` (rows), `TopicCards` (the card grid and the cluster colours), `TopicTrend` |
 | `components/graph/` | the graph page: `GraphView` (toolbar, canvas, states), `layout.ts` (elkjs), `nodes.tsx` (topic and cluster nodes), `TopicPanel` |
 | `components/search/` | the search page: `SearchView` (the suggested searches, the query, the filter row, states, the grid), `TagCloud` (the facets' tags as toggles), `DocumentCard`, `DocumentView` (the header bar and body the dialog and the standalone page share, plus `DocumentPage` for `/documents/[id]`), `DocumentDialog` |
-| `components/common/` | shared hand-written pieces: `Brand` (the SLOPSHOP icon from `public/slopshop.svg` and the wordmark in the theme's text colour, in the sidebar and leading the standalone pages; `app/icon.svg` is the same icon as the favicon),
+| `components/common/` | shared hand-written pieces: `Brand` (the SLOPSHOP icon from `public/slopshop.svg` and the wordmark in Fredoka, `font-brand`, in the theme's text colour, in the sidebar and leading the standalone pages; `app/icon.svg` is the same icon as the favicon),
  `FilterBar` (as the bar: the search box, applied on Enter or when cleared, the Filters popover, whose draft Apply writes to the URL at once, the chips and Group by; as the `rail`: the same as a column that writes each change at once; it fetches its own facets from `/v1/summaries` when the page passes none, so a `facets` prop, even `{}`, means it fetches nothing), `Markdown` (Streamdown via AI Elements), `SeverityBadge`, `CopyButton`, `SeverityBar`, `ControlsetSelector` (the control-set picker), `LoadMore` (the foot of a paged list: the Load more button and, where a list shows one, the end mark) |
 | `components/ui/`, `components/ai-elements/` | shadcn and AI Elements registry components, never hand-edited |
 | `lib/api/` | every query: `client.ts` (the one fetch client), `summaries.ts`, `digest.ts`, `topics.ts`, `search.ts`, `me.ts`, `types.ts` |
 | `lib/url/filters.ts` | the URL state (nuqs): parsers, `useFilters()`, `filterQuery()`, `serializeFilters()` |
 | `stores/ui-store.ts` | client-only UI state: the chat panel's visibility, the filter rail's (`filtersOpen`), and the picked control set (the last two persisted in `localStorage` as `summary-ui.ui`) |
-| `app/globals.css` | tokens (violet/indigo palette, light and dark, severity and AI accent colours), the `.ai-*` and row-entrance utilities, the frame surfaces keyed on registry `data-slot`s, calendar day markers, Streamdown table styling |
+| `app/layout.tsx` | the fonts, all from npm packages through `next/font/local` so nothing is fetched at build or run time: Geist Sans and Mono (`geist`) and Fredoka (`@fontsource-variable/fredoka`, the wordmark's `--font-brand`) |
+| `app/globals.css` | tokens (violet/indigo palette, light and dark, severity and AI accent colours),
+ the `.ai-*` and row-entrance utilities, the frame surfaces keyed on registry `data-slot`s, calendar day markers, Streamdown table styling |
 
 ## Environment
 

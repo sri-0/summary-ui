@@ -16,8 +16,11 @@ const fredoka = localFont({
   display: "swap",
 });
 
+/** The tab reads SLOPSHOP on its own and "SLOPSHOP · <page>" on every page
+ *  that names itself. */
 export const metadata: Metadata = {
-  title: "Slopshop",
+  title: { default: "SLOPSHOP", template: "SLOPSHOP · %s" },
+
   description: "Slopshop: review AI summaries by date, severity, project and topic, and search documents, images and videos by meaning",
 
 };

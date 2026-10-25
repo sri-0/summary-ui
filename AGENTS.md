@@ -34,6 +34,8 @@ token; the UI talks to the gateway. The gateway's CORS allowlist includes
 | Path | What it holds |
 |---|---|
 | `app/page.tsx` | redirects to `/summaries` (`instant = false`: a redirect has nothing to validate) |
+| `app/layout.tsx` (metadata) | the tab title: `SLOPSHOP` alone, `SLOPSHOP · <page>` on every page, each page naming itself in its `metadata` (AI Summaries, AI Search, Explore, Discover, Report, Document) |
+
 | `app/(app)/layout.tsx` | `SidebarProvider` → one `Suspense` → `AppSidebar` + `AppShell`; every client component reading the URL sits under it (`cacheComponents`) |
 | `app/(app)/graph/` | the topic graph page |
 | `app/(app)/summaries/page.tsx` | `<Suspense><SummariesView/></Suspense>` |

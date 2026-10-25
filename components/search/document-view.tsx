@@ -11,7 +11,8 @@ import { API_URL, ApiError, errorMessage } from "@/lib/api/client";
 import { useDocument } from "@/lib/api/search";
 import type { SearchDocument } from "@/lib/api/types";
 import { dayjs } from "@/lib/dayjs";
-import { DownloadIcon, FileTextIcon } from "lucide-react";
+import { serializeFilters, useFilters } from "@/lib/url/filters";
+import { ClockIcon, DownloadIcon, FileTextIcon } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { ReactNode } from "react";
@@ -21,13 +22,17 @@ const controls = { table: { fullscreen: false }, mermaid: { fullscreen: false } 
 
 /** One document, as the dialog and the standalone page both show it: a flat
  *  header bar (`lead` at the left, the dialog's Close or the page's brand;
- *  the title, its excerpt and the kind, project, tags, date and score; Share
+ *  the title with the date beside it, its excerpt and the kind, project and
+ *  tags, the project and tags linking to the AI search filtered by them with
+ *  the current range, and the score; Share
  *  link, which copies the document's own route, Open summary and Download
  *  PDF at the right), then the document itself. Open summary calls
  *  `onOpenSummary` when given (the dialog swaps to the summary dialog) and
  *  otherwise links to the summary's own route. The record loads by id, so a
  *  deep link works. */
 export function DocumentView({ id, lead, onOpenSummary }: { id: string; lead: ReactNode; onOpenSummary?: (summaryId: string) => void }) {
+  const { filters } = useFilters();
+  const range = { from: filters.from, to: filters.to };
   const { data: d, error, refetch } = useDocument(id);
   const notFound = error instanceof ApiError && error.status === 404;
 
@@ -36,21 +41,29 @@ export function DocumentView({ id, lead, onOpenSummary }: { id: string; lead: Re
       <header className="flex shrink-0 items-start gap-3 border-b bg-sidebar px-3 py-2.5 text-sidebar-foreground">
         <div className="self-center">{lead}</div>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h1 className="truncate text-base leading-7 font-semibold">{d?.title ?? (notFound ? "Document" : "")}</h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="min-w-0 truncate text-base leading-7 font-semibold">{d?.title ?? (notFound ? "Document" : "")}</h1>
+            {d && (
+              <time dateTime={d.created_at} className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground tabular-nums">
+                <ClockIcon className="size-3" aria-hidden />
+                {dayjs(d.created_at).format("ddd D MMM YYYY, HH:mm")}
+              </time>
+            )}
+          </div>
           {d && (
             <>
               <p className="line-clamp-2 text-sm text-muted-foreground">{d.excerpt}</p>
               <div className="flex flex-wrap items-center gap-1.5">
-                <time dateTime={d.created_at} className="mr-1 text-xs text-muted-foreground tabular-nums">
-                  {dayjs(d.created_at).format("ddd D MMM YYYY, HH:mm")}
-                </time>
                 <Badge variant="secondary">{KIND_LABEL[d.kind]}</Badge>
-                <Badge variant="secondary">{d.project.name}</Badge>
+                <Badge asChild variant="secondary">
+                  <Link href={serializeFilters("/search", { ...range, project: [d.project.id] })}>{d.project.name}</Link>
+                </Badge>
                 {d.tags.map((t) => (
-                  <Badge key={t} variant="secondary">
-                    {t}
+                  <Badge key={t} asChild variant="secondary">
+                    <Link href={serializeFilters("/search", { ...range, tag: [t] })}>{t}</Link>
                   </Badge>
                 ))}
+
                 {d.score !== undefined && <span className="ml-1 text-xs text-muted-foreground tabular-nums">score {d.score.toFixed(2)}</span>}
 
               </div>

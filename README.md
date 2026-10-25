@@ -24,5 +24,6 @@ Taken against the seeded local stack at 1920×1200, in dark mode; every one is i
 |---|---|
 | **AI Summaries**: the filter rail, the streamed digest and the grouped table | ![AI Summaries](docs/summaries.png) |
 | **A report**: the full-screen view, its header badges linking to the filtered summaries and to Explore | ![Summary report](docs/summary-report.png) |
+| **Explore**: the ranked topics with the trend, and one level in ([a topic's subtopics and summaries](docs/explore-topic.png)) | ![Explore](docs/explore.png) |
 | **AI Search**: suggested searches, kind counts, filters, and image and video results | ![AI Search](docs/ai-search.png) |
 | **Discover**: topics in clusters, tags beside them, and a topic's panel | ![Discover](docs/discover.png) |

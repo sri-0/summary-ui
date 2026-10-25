@@ -41,6 +41,9 @@ export function DocumentView({ id, lead, onOpenSummary }: { id: string; lead: Re
             <>
               <p className="line-clamp-2 text-sm text-muted-foreground">{d.excerpt}</p>
               <div className="flex flex-wrap items-center gap-1.5">
+                <time dateTime={d.created_at} className="mr-1 text-xs text-muted-foreground tabular-nums">
+                  {dayjs(d.created_at).format("ddd D MMM YYYY, HH:mm")}
+                </time>
                 <Badge variant="secondary">{KIND_LABEL[d.kind]}</Badge>
                 <Badge variant="secondary">{d.project.name}</Badge>
                 {d.tags.map((t) => (
@@ -48,10 +51,8 @@ export function DocumentView({ id, lead, onOpenSummary }: { id: string; lead: Re
                     {t}
                   </Badge>
                 ))}
-                <time dateTime={d.created_at} className="ml-1 text-xs text-muted-foreground tabular-nums">
-                  {dayjs(d.created_at).format("ddd D MMM YYYY, HH:mm")}
-                </time>
-                {d.score !== undefined && <span className="text-xs text-muted-foreground tabular-nums">· score {d.score.toFixed(2)}</span>}
+                {d.score !== undefined && <span className="ml-1 text-xs text-muted-foreground tabular-nums">score {d.score.toFixed(2)}</span>}
+
               </div>
             </>
           )}

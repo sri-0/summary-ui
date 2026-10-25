@@ -19,8 +19,9 @@ const controls = { table: { fullscreen: false }, mermaid: { fullscreen: false } 
 
 /** One summary's report, as the dialog and the standalone page both show it:
  *  a flat header bar on the sidebar's surface (`lead` at the left, the
- *  dialog's Close or the page's brand; the title, its excerpt and the
- *  metadata as uniform badges; Share link, which copies the report's own
+ *  dialog's Close or the page's brand; the title, its excerpt, then the date
+ *  leading the metadata as uniform badges; Share link, which copies the report's own
+
  *  route, and Copy markdown at the right), then the markdown, with its own
  *  heading, scrolling beneath on the card surface. The record and the body
  *  load by id, so a deep link works. */
@@ -40,6 +41,9 @@ export function SummaryReport({ id, lead }: { id: string; lead: ReactNode }) {
             <>
               <p className="line-clamp-2 text-sm text-muted-foreground">{s.excerpt}</p>
               <div className="flex flex-wrap items-center gap-1.5">
+                <time dateTime={s.created_at} className="mr-1 text-xs text-muted-foreground tabular-nums">
+                  {dayjs(s.created_at).format("ddd D MMM YYYY, HH:mm")}
+                </time>
                 <SeverityBadge severity={s.severity} />
                 <Badge variant="secondary">{s.project.name}</Badge>
                 <Badge variant="secondary">{s.topic.label}</Badge>
@@ -53,9 +57,6 @@ export function SummaryReport({ id, lead }: { id: string; lead: ReactNode }) {
                     {t}
                   </Badge>
                 ))}
-                <time dateTime={s.created_at} className="ml-1 text-xs text-muted-foreground tabular-nums">
-                  {dayjs(s.created_at).format("ddd D MMM YYYY, HH:mm")}
-                </time>
               </div>
             </>
           )}

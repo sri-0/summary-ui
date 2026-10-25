@@ -68,11 +68,12 @@ export const TagNode = memo(function TagNode({ data }: NodeProps<Node<TagNodeDat
   );
 });
 
-/** A cluster: a solid card panel at partial opacity with a hairline, named
- *  at its top-left in its colour, sized to hold its topics. */
+/** A cluster: a dashed outline with no fill, named at its top-left in its
+ *  colour, sized to hold its topics. */
 export function ClusterNode({ data }: NodeProps<Node<ClusterNodeData, "cluster">>) {
   return (
-    <div style={{ "--cluster": data.color } as CSSProperties} className="h-full w-full rounded-xl bg-card/70 ring-1 ring-foreground/10">
+    <div style={{ "--cluster": data.color } as CSSProperties} className="h-full w-full rounded-xl border border-dashed border-foreground/15">
+
 
       <div className="absolute top-3 left-4 flex items-center gap-1.5 text-xs font-medium text-(--cluster)">
         <span className="size-2 rounded-full bg-(--cluster)" aria-hidden />

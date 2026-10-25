@@ -9,6 +9,7 @@ import { type ClusterNodeData, GraphState, nodeTypes, type TagNodeData, type Top
 import { clusterColors } from "@/components/topics/topic-cards";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,8 +19,9 @@ import type { GraphEdge, TopicGraph } from "@/lib/api/types";
 import { dayjs } from "@/lib/dayjs";
 import { useFilters } from "@/lib/url/filters";
 import { cn } from "@/lib/utils";
+import { type GraphOptions, useUiStore } from "@/stores/ui-store";
 import { Background, Controls, type Edge, MiniMap, type Node, ReactFlow, ReactFlowProvider, useReactFlow } from "@xyflow/react";
-import { CircleAlertIcon, GraphStarIcon, Maximize2Icon } from "lucide-react";
+import { CircleAlertIcon, GraphStarIcon, Maximize2Icon, Settings2Icon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useState } from "react";
 
@@ -39,8 +41,10 @@ type TagNode = Node<TagNodeData, "tag">;
 /** The Discover page: every topic in the range laid out inside its cluster
  *  and joined by co-occurrence, the set's top tags standing beside them and
  *  joined to the topics they are on, so topics, tags and how they connect
- *  are one picture. The selected node (`topic`, a topic id or `tag:<tag>`)
- *  is detailed in a resizable panel at the right of the canvas. */
+ *  are one picture. The header and toolbar float over the canvas, so the
+ *  selected node (`topic`, a topic id or `tag:<tag>`), detailed in a
+ *  resizable panel at the right, runs the page's full height. The Options
+ *  menu picks what is drawn (stores/ui-store.ts, kept across reloads). */
 export function GraphView() {
   return (
     <ReactFlowProvider>
@@ -56,6 +60,8 @@ function Graph() {
   const [hovered, setHovered] = useState<string | null>(null);
   const { fitView } = useReactFlow();
   const { resolvedTheme } = useTheme();
+  const options = useUiStore((s) => s.graph);
+  const setGraph = useUiStore((s) => s.setGraph);
 
   useEffect(() => {
     if (!graph) return;
@@ -71,11 +77,11 @@ function Graph() {
 
   const colors = useMemo(() => clusterColors(graph?.clusters.map((c) => c.id) ?? []), [graph]);
   const selected = graph?.nodes.find((n) => n.id === filters.topic);
-  const drawn = useMemo(() => drawnEdges(graph), [graph]);
+  const drawn = useMemo(() => drawnEdges(graph, options), [graph, options]);
   const near = useMemo(() => neighbours(drawn, hovered), [drawn, hovered]);
   // The node objects change only with the graph: React Flow re-measures every
   // node it is handed anew, so hover and selection reach nodes by context.
-  const nodes = useMemo(() => buildNodes(graph, layout, colors), [graph, layout, colors]);
+  const nodes = useMemo(() => buildNodes(graph, layout, colors, options.tags), [graph, layout, colors, options.tags]);
   const edges = useMemo(() => buildEdges(drawn, layout, hovered, near), [drawn, layout, hovered, near]);
   const state = useMemo(() => ({ selected: filters.topic, hovered, near }), [filters.topic, hovered, near]);
   const linked = useMemo(() => (graph && selected ? linkedTo(graph, selected.id) : { topics: [], tags: [] }), [graph, selected]);
@@ -84,30 +90,28 @@ function Graph() {
   const to = dayjs(filters.to);
   const tagCount = graph?.nodes.filter((n) => n.kind === "tag").length ?? 0;
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <header className="flex flex-col gap-3 px-4 pt-3 pb-3 md:px-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Discover</h1>
-          <p className="text-sm text-muted-foreground">
-            {from.isSame(to, "day") ? to.format("D MMM YYYY") : `${from.format("D MMM")} – ${to.format("D MMM YYYY")}`}
-            {graph && (
-              <>
-                {" "}
-                · {graph.nodes.length - tagCount} topics in {graph.clusters.length} clusters{tagCount > 0 && <> · {tagCount} tags</>}
-              </>
-            )}
-          </p>
-        </div>
-        <FilterBar show={["severity", "project", "tag", "q"]}>
-          <Button variant="outline" size="sm" className="bg-card" onClick={() => void fitView({ padding: 0.1, duration: 200 })}>
-            <Maximize2Icon data-icon="inline-start" />
-            Fit
-          </Button>
-        </FilterBar>
-      </header>
-
-      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
-        <ResizablePanel id="graph" minSize="40%" className={cn("relative min-h-0 transition-opacity", isPlaceholderData && "opacity-70")}>
+    <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
+      <ResizablePanel id="graph" minSize="40%" className="relative min-h-0">
+        {/* The header floats over the canvas on a glass strip, so the graph and
+            the panel beside it use the whole height. */}
+        <header className="absolute inset-x-0 top-0 z-10 flex flex-col gap-3 bg-background/70 px-4 pt-3 pb-3 backdrop-blur-sm md:px-6">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Discover</h1>
+            <p className="text-sm text-muted-foreground">
+              {from.isSame(to, "day") ? to.format("D MMM YYYY") : `${from.format("D MMM")} – ${to.format("D MMM YYYY")}`}
+              {graph && (
+                <>
+                  {" "}
+                  · {graph.nodes.length - tagCount} topics in {graph.clusters.length} clusters{tagCount > 0 && <> · {tagCount} tags</>}
+                </>
+              )}
+            </p>
+          </div>
+          <FilterBar show={["severity", "project", "tag", "q"]}>
+            <GraphMenu options={options} setGraph={setGraph} onFit={() => void fitView({ padding: 0.1, duration: 200 })} />
+          </FilterBar>
+        </header>
+        <div className={cn("h-full transition-opacity", isPlaceholderData && "opacity-70")}>
           {isPending ? (
             <Skeleton className="h-full w-full rounded-none" />
           ) : error ? (
@@ -153,11 +157,14 @@ function Graph() {
               >
                 <Background gap={24} color="var(--border)" />
                 <Controls showInteractive={false} className="overflow-hidden rounded-md" />
-                <MiniMap pannable zoomable className="rounded-md ring-1 ring-foreground/10" nodeColor={(n: Node) => (n.type === "topic" ? (n.data as TopicNodeData).color : n.type === "tag" ? "var(--muted-foreground)" : "transparent")} />
+                {options.minimap && (
+                  <MiniMap pannable zoomable className="rounded-md ring-1 ring-foreground/10" nodeColor={(n: Node) => (n.type === "topic" ? (n.data as TopicNodeData).color : n.type === "tag" ? "var(--muted-foreground)" : "transparent")} />
+                )}
               </ReactFlow>
             </GraphState>
           )}
-        </ResizablePanel>
+        </div>
+      </ResizablePanel>
         {selected && (
           <>
             <ResizableHandle withHandle className="bg-transparent after:w-3 [&>div]:h-10 [&>div]:opacity-0 [&>div]:transition-opacity hover:[&>div]:opacity-100 active:[&>div]:opacity-100" />
@@ -175,21 +182,57 @@ function Graph() {
             </ResizablePanel>
           </>
         )}
-      </ResizablePanelGroup>
-    </div>
+    </ResizablePanelGroup>
   );
 }
 
-/** The edges the canvas draws: every co-occurrence and hierarchy edge, and
- *  each topic's heaviest TAG_EDGES_PER_TOPIC tag edges, so the tags read as
- *  a second layer rather than a thicket. */
-function drawnEdges(graph: TopicGraph | undefined): GraphEdge[] {
+/** The Options menu: what the canvas draws, and Fit to screen. */
+function GraphMenu({ options, setGraph, onFit }: { options: GraphOptions; setGraph: (patch: Partial<GraphOptions>) => void; onFit: () => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="bg-card">
+          <Settings2Icon data-icon="inline-start" />
+          Options
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuItem onSelect={onFit}>
+          <Maximize2Icon />
+          Fit to screen
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Draw</DropdownMenuLabel>
+        <DropdownMenuCheckboxItem checked={options.tags} onCheckedChange={(v) => setGraph({ tags: v })}>
+          Tags
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem checked={options.tagEdges} disabled={!options.tags} onCheckedChange={(v) => setGraph({ tagEdges: v })}>
+          Topic to tag edges
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem checked={options.hierarchy} onCheckedChange={(v) => setGraph({ hierarchy: v })}>
+          Root to subtopic edges
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem checked={options.minimap} onCheckedChange={(v) => setGraph({ minimap: v })}>
+          Minimap
+        </DropdownMenuCheckboxItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** The edges the canvas draws: every co-occurrence edge, the hierarchy
+ *  edges when the options keep them, and each topic's heaviest
+ *  TAG_EDGES_PER_TOPIC tag edges when tags and their edges are drawn, so the
+ *  tags read as a second layer rather than a thicket. */
+function drawnEdges(graph: TopicGraph | undefined, options: GraphOptions): GraphEdge[] {
   if (!graph) return [];
   const perTopic = new Map<string, number>();
   return [...graph.edges]
     .sort((a, b) => b.weight - a.weight)
     .filter((e) => {
-      if (e.kind !== "tag") return e.kind === "cooccurrence" || e.kind === "hierarchy";
+      if (e.kind === "cooccurrence") return true;
+      if (e.kind === "hierarchy") return options.hierarchy;
+      if (!options.tags || !options.tagEdges) return false;
       const n = perTopic.get(e.source) ?? 0;
       perTopic.set(e.source, n + 1);
       return n < TAG_EDGES_PER_TOPIC;
@@ -212,7 +255,7 @@ function neighbours(drawn: GraphEdge[], hovered: string | null): Set<string> {
  *  the tags beside, placed and sized by the layout. The sizes go on the
  *  nodes themselves, so React Flow (and its MiniMap) has them without
  *  measuring the DOM. */
-function buildNodes(graph: TopicGraph | undefined, layout: LayoutResult | null, colors: Map<string, string>): (TopicNode | ClusterNode | TagNode)[] {
+function buildNodes(graph: TopicGraph | undefined, layout: LayoutResult | null, colors: Map<string, string>, tags: boolean): (TopicNode | ClusterNode | TagNode)[] {
   const nodes: (TopicNode | ClusterNode | TagNode)[] = [];
   if (!graph || !layout) return nodes;
   const clusterById = new Map(graph.clusters.map((c) => [clusterNodeId(c.id), c]));
@@ -246,7 +289,7 @@ function buildNodes(graph: TopicGraph | undefined, layout: LayoutResult | null, 
       ariaLabel: `${topic.label}, ${topic.count} summaries`,
     });
   }
-  for (const t of layout.tags) {
+  for (const t of tags ? layout.tags : []) {
     const tag = byId.get(t.id);
     if (!tag) continue;
     nodes.push({ id: t.id, type: "tag", position: { x: t.x, y: t.y }, data: { tag }, width: t.width, height: t.height, ariaLabel: `Tag ${tag.label}, ${tag.count} summaries` });

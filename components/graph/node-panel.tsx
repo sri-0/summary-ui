@@ -39,7 +39,8 @@ export function NodePanel({
   const isTag = node.kind === "tag";
   const summaries: Filters = isTag ? { ...filters, topic: null, tag: [node.label] } : { ...filters, topic: null, topics: [node.id] };
   return (
-    <aside data-scroll aria-label={node.label} className="flex h-full flex-col gap-5 overflow-y-auto px-6 py-4" style={{ "--cluster": color } as CSSProperties}>
+    <aside data-scroll aria-label={node.label} className="flex h-full flex-col gap-5 overflow-y-auto border-l px-6 py-4" style={{ "--cluster": color } as CSSProperties}>
+
       <header className="flex flex-col gap-2">
         <div className="flex items-start gap-2">
           <h2 className="flex min-w-0 flex-1 items-center gap-1.5 text-xl font-semibold tracking-tight">

@@ -4,40 +4,43 @@ import "@xyflow/react/dist/style.css";
 
 import { FilterBar } from "@/components/common/filter-bar";
 import { clusterNodeId, type LayoutResult, layoutGraph } from "@/components/graph/layout";
-import { type ClusterNodeData, GraphState, nodeTypes, type TopicNodeData } from "@/components/graph/nodes";
-import { type Related, TopicPanel } from "@/components/graph/topic-panel";
+import { type Linked, NodePanel } from "@/components/graph/node-panel";
+import { type ClusterNodeData, GraphState, nodeTypes, type TagNodeData, type TopicNodeData } from "@/components/graph/nodes";
 import { clusterColors } from "@/components/topics/topic-cards";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { errorMessage } from "@/lib/api/client";
 import { useTopicGraph } from "@/lib/api/graph";
 import type { GraphEdge, TopicGraph } from "@/lib/api/types";
 import { dayjs } from "@/lib/dayjs";
-import { type EdgeKind, useFilters } from "@/lib/url/filters";
+import { useFilters } from "@/lib/url/filters";
 import { cn } from "@/lib/utils";
 import { Background, Controls, type Edge, MiniMap, type Node, ReactFlow, ReactFlowProvider, useReactFlow } from "@xyflow/react";
-import { CircleAlertIcon, Maximize2Icon, WaypointsIcon } from "lucide-react";
+import { CircleAlertIcon, GraphStarIcon, Maximize2Icon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-/** Edges of the drawn kind are this wide, scaled by weight. */
+/** Co-occurrence edges are this wide, scaled by weight; tag edges thinner. */
 const STROKE_MIN = 1;
 const STROKE_MAX = 5;
-/** How many related topics the panel lists. */
-const RELATED_MAX = 8;
+const TAG_STROKE_MAX = 2.5;
+/** How many linked nodes of each kind the panel lists. */
+const LINKED_MAX = 8;
+/** How many of a topic's tags are drawn as edges; the panel lists them all. */
+const TAG_EDGES_PER_TOPIC = 4;
 
 type TopicNode = Node<TopicNodeData, "topic">;
 type ClusterNode = Node<ClusterNodeData, "cluster">;
+type TagNode = Node<TagNodeData, "tag">;
 
-/** The topic graph page: every topic in the range laid out inside its
- *  cluster, joined by co-occurrence or shared-tag edges (the URL's `edges`),
- *  with the selected topic (`topic`) detailed in a resizable panel at the
- *  right of the canvas. The canvas is transparent, so the page's own wash
- *  runs under the header and the graph alike. */
+/** The Discover page: every topic in the range laid out inside its cluster
+ *  and joined by co-occurrence, the set's top tags standing beside them and
+ *  joined to the topics they are on, so topics, tags and how they connect
+ *  are one picture. The selected node (`topic`, a topic id or `tag:<tag>`)
+ *  is detailed in a resizable panel at the right of the canvas. */
 export function GraphView() {
   return (
     <ReactFlowProvider>
@@ -47,7 +50,7 @@ export function GraphView() {
 }
 
 function Graph() {
-  const { filters, edges: kind, setFilters } = useFilters();
+  const { filters, setFilters } = useFilters();
   const { data: graph, error, isPending, isPlaceholderData, refetch } = useTopicGraph(filters);
   const [layout, setLayout] = useState<LayoutResult | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -68,17 +71,18 @@ function Graph() {
 
   const colors = useMemo(() => clusterColors(graph?.clusters.map((c) => c.id) ?? []), [graph]);
   const selected = graph?.nodes.find((n) => n.id === filters.topic);
-  const drawn = useMemo(() => graph?.edges.filter((e) => e.kind === kind || e.kind === "hierarchy") ?? [], [graph, kind]);
+  const drawn = useMemo(() => drawnEdges(graph), [graph]);
   const near = useMemo(() => neighbours(drawn, hovered), [drawn, hovered]);
   // The node objects change only with the graph: React Flow re-measures every
   // node it is handed anew, so hover and selection reach nodes by context.
   const nodes = useMemo(() => buildNodes(graph, layout, colors), [graph, layout, colors]);
-  const edges = useMemo(() => buildEdges(drawn, layout, kind, hovered, near), [drawn, layout, kind, hovered, near]);
+  const edges = useMemo(() => buildEdges(drawn, layout, hovered, near), [drawn, layout, hovered, near]);
   const state = useMemo(() => ({ selected: filters.topic, hovered, near }), [filters.topic, hovered, near]);
-  const related = useMemo(() => (graph && selected ? relatedTo(graph, selected.id, kind) : []), [graph, selected, kind]);
+  const linked = useMemo(() => (graph && selected ? linkedTo(graph, selected.id) : { topics: [], tags: [] }), [graph, selected]);
 
   const from = dayjs(filters.from);
   const to = dayjs(filters.to);
+  const tagCount = graph?.nodes.filter((n) => n.kind === "tag").length ?? 0;
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex flex-col gap-3 px-4 pt-3 pb-3 md:px-6">
@@ -86,25 +90,16 @@ function Graph() {
           <h1 className="text-2xl font-semibold tracking-tight">Discover</h1>
           <p className="text-sm text-muted-foreground">
             {from.isSame(to, "day") ? to.format("D MMM YYYY") : `${from.format("D MMM")} – ${to.format("D MMM YYYY")}`}
-            {graph && <> · {graph.nodes.length} topics in {graph.clusters.length} clusters</>}
+            {graph && (
+              <>
+                {" "}
+                · {graph.nodes.length - tagCount} topics in {graph.clusters.length} clusters{tagCount > 0 && <> · {tagCount} tags</>}
+              </>
+            )}
           </p>
         </div>
         <FilterBar show={["severity", "project", "tag", "q"]}>
-          <ToggleGroup type="single" variant="outline" size="sm" aria-label="Edges" value={kind} onValueChange={(v) => v && setFilters({ edges: v as EdgeKind })}>
-            <ToggleGroupItem value="cooccurrence">Co-occurrence</ToggleGroupItem>
-            <ToggleGroupItem value="tags">Shared tags</ToggleGroupItem>
-          </ToggleGroup>
-          {graph && graph.clusters.length > 0 && (
-            <ul aria-label="Clusters" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              {graph.clusters.map((c) => (
-                <li key={c.id} className="flex items-center gap-1.5" style={{ "--cluster": colors.get(c.id) } as CSSProperties}>
-                  <span className="size-2 rounded-full bg-(--cluster)" aria-hidden />
-                  {c.label}
-                </li>
-              ))}
-            </ul>
-          )}
-          <Button variant="outline" size="sm" onClick={() => void fitView({ padding: 0.1, duration: 200 })}>
+          <Button variant="outline" size="sm" className="bg-card" onClick={() => void fitView({ padding: 0.1, duration: 200 })}>
             <Maximize2Icon data-icon="inline-start" />
             Fit
           </Button>
@@ -130,7 +125,7 @@ function Graph() {
             <Empty className="h-full">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
-                  <WaypointsIcon />
+                  <GraphStarIcon />
                 </EmptyMedia>
                 <EmptyTitle>No topics in this range</EmptyTitle>
                 <EmptyDescription>Widen the dates or clear filters.</EmptyDescription>
@@ -150,15 +145,15 @@ function Graph() {
                 nodesConnectable={false}
                 nodesDraggable={false}
                 edgesFocusable={false}
-                onNodeClick={(_, n) => n.type === "topic" && setFilters({ topic: n.id })}
-                onNodeMouseEnter={(_, n) => n.type === "topic" && setHovered(n.id)}
+                onNodeClick={(_, n) => n.type !== "cluster" && setFilters({ topic: n.id })}
+                onNodeMouseEnter={(_, n) => n.type !== "cluster" && setHovered(n.id)}
                 onNodeMouseLeave={() => setHovered(null)}
                 onPaneClick={() => setFilters({ topic: null })}
-                className="bg-transparent [--xy-controls-box-shadow:none] [--xy-controls-button-background-color:var(--card)] [--xy-controls-button-background-color-hover:var(--muted)] [--xy-controls-button-border-color:var(--border)] [--xy-controls-button-color:var(--muted-foreground)] [--xy-controls-button-color-hover:var(--foreground)] [--xy-minimap-background-color:var(--card)] [--xy-minimap-mask-background-color:color-mix(in_oklab,var(--background)_70%,transparent)] [--xy-minimap-node-stroke-color:transparent]"
+                className="[--xy-background-color:var(--background)] [--xy-controls-box-shadow:none] [--xy-controls-button-background-color:var(--card)] [--xy-controls-button-background-color-hover:var(--muted)] [--xy-controls-button-border-color:var(--border)] [--xy-controls-button-color:var(--muted-foreground)] [--xy-controls-button-color-hover:var(--foreground)] [--xy-minimap-background-color:var(--card)] [--xy-minimap-mask-background-color:color-mix(in_oklab,var(--background)_70%,transparent)] [--xy-minimap-node-stroke-color:transparent]"
               >
                 <Background gap={24} color="var(--border)" />
                 <Controls showInteractive={false} className="overflow-hidden rounded-md" />
-                <MiniMap pannable zoomable className="rounded-md ring-1 ring-foreground/10" nodeColor={(n: Node) => (n.type === "topic" ? (n.data as TopicNodeData).color : "transparent")} />
+                <MiniMap pannable zoomable className="rounded-md ring-1 ring-foreground/10" nodeColor={(n: Node) => (n.type === "topic" ? (n.data as TopicNodeData).color : n.type === "tag" ? "var(--muted-foreground)" : "transparent")} />
               </ReactFlow>
             </GraphState>
           )}
@@ -166,14 +161,13 @@ function Graph() {
         {selected && (
           <>
             <ResizableHandle withHandle className="bg-transparent after:w-3 [&>div]:h-10 [&>div]:opacity-0 [&>div]:transition-opacity hover:[&>div]:opacity-100 active:[&>div]:opacity-100" />
-
-            <ResizablePanel id="topic" defaultSize="28%" minSize="20%" maxSize="45%" className="min-h-0">
-              <TopicPanel
+            <ResizablePanel id="node" defaultSize="28%" minSize="20%" maxSize="45%" className="min-h-0">
+              <NodePanel
                 key={selected.id}
-                topic={selected}
-                color={colors.get(selected.cluster_id)!}
-                related={related}
-                kind={kind}
+                node={selected}
+                color={selected.cluster_id ? colors.get(selected.cluster_id) : undefined}
+                topics={linked.topics}
+                tags={linked.tags}
                 filters={filters}
                 onSelect={(id) => setFilters({ topic: id })}
                 onClose={() => setFilters({ topic: null })}
@@ -183,11 +177,26 @@ function Graph() {
         )}
       </ResizablePanelGroup>
     </div>
-
   );
 }
 
-/** The hovered topic and every topic a drawn edge joins it to; empty when nothing is hovered. */
+/** The edges the canvas draws: every co-occurrence and hierarchy edge, and
+ *  each topic's heaviest TAG_EDGES_PER_TOPIC tag edges, so the tags read as
+ *  a second layer rather than a thicket. */
+function drawnEdges(graph: TopicGraph | undefined): GraphEdge[] {
+  if (!graph) return [];
+  const perTopic = new Map<string, number>();
+  return [...graph.edges]
+    .sort((a, b) => b.weight - a.weight)
+    .filter((e) => {
+      if (e.kind !== "tag") return e.kind === "cooccurrence" || e.kind === "hierarchy";
+      const n = perTopic.get(e.source) ?? 0;
+      perTopic.set(e.source, n + 1);
+      return n < TAG_EDGES_PER_TOPIC;
+    });
+}
+
+/** The hovered node and every node a drawn edge joins it to; empty when nothing is hovered. */
 function neighbours(drawn: GraphEdge[], hovered: string | null): Set<string> {
   const near = new Set<string>();
   if (!hovered) return near;
@@ -199,11 +208,12 @@ function neighbours(drawn: GraphEdge[], hovered: string | null): Set<string> {
   return near;
 }
 
-/** A cluster node behind each cluster's topics, placed and sized by the
- *  layout. The sizes go on the nodes themselves, so React Flow (and its
- *  MiniMap) has them without measuring the DOM. */
-function buildNodes(graph: TopicGraph | undefined, layout: LayoutResult | null, colors: Map<string, string>): (TopicNode | ClusterNode)[] {
-  const nodes: (TopicNode | ClusterNode)[] = [];
+/** A cluster node behind each cluster's topics, the topics inside them and
+ *  the tags beside, placed and sized by the layout. The sizes go on the
+ *  nodes themselves, so React Flow (and its MiniMap) has them without
+ *  measuring the DOM. */
+function buildNodes(graph: TopicGraph | undefined, layout: LayoutResult | null, colors: Map<string, string>): (TopicNode | ClusterNode | TagNode)[] {
+  const nodes: (TopicNode | ClusterNode | TagNode)[] = [];
   if (!graph || !layout) return nodes;
   const clusterById = new Map(graph.clusters.map((c) => [clusterNodeId(c.id), c]));
   for (const c of layout.clusters) {
@@ -220,9 +230,9 @@ function buildNodes(graph: TopicGraph | undefined, layout: LayoutResult | null, 
       zIndex: -1,
     });
   }
-  const topicById = new Map(graph.nodes.map((n) => [n.id, n]));
+  const byId = new Map(graph.nodes.map((n) => [n.id, n]));
   for (const n of layout.nodes) {
-    const topic = topicById.get(n.id);
+    const topic = byId.get(n.id);
     if (!topic) continue;
     nodes.push({
       id: n.id,
@@ -230,26 +240,36 @@ function buildNodes(graph: TopicGraph | undefined, layout: LayoutResult | null, 
       position: { x: n.x, y: n.y },
       parentId: n.parent,
       extent: "parent",
-      data: { topic, color: colors.get(topic.cluster_id)! },
+      data: { topic, color: colors.get(topic.cluster_id ?? "") ?? "var(--muted-foreground)" },
       width: n.width,
       height: n.height,
       ariaLabel: `${topic.label}, ${topic.count} summaries`,
     });
   }
+  for (const t of layout.tags) {
+    const tag = byId.get(t.id);
+    if (!tag) continue;
+    nodes.push({ id: t.id, type: "tag", position: { x: t.x, y: t.y }, data: { tag }, width: t.width, height: t.height, ariaLabel: `Tag ${tag.label}, ${tag.count} summaries` });
+  }
   return nodes;
 }
 
-/** The drawn kind's edges scaled by weight, hierarchy edges faint, and every
- *  edge away from the hovered topic dimmed. Edges run left to right so none
- *  loops back on itself. */
-function buildEdges(drawn: GraphEdge[], layout: LayoutResult | null, kind: EdgeKind, hovered: string | null, near: Set<string>): Edge[] {
+/** Co-occurrence edges scaled by weight, tag edges thinner and lighter,
+ *  hierarchy edges faint, and every edge away from the hovered node dimmed.
+ *  Edges run left to right so none loops back on itself. */
+function buildEdges(drawn: GraphEdge[], layout: LayoutResult | null, hovered: string | null, near: Set<string>): Edge[] {
   const edges: Edge[] = [];
   if (!layout) return edges;
   const left = new Map<string, number>();
   for (const n of layout.nodes) left.set(n.id, n.x + (layout.clusters.find((c) => c.id === n.parent)?.x ?? 0));
-  const weights = drawn.filter((e) => e.kind === kind).map((e) => e.weight);
-  const min = Math.min(...weights);
-  const span = Math.max(...weights) - min || 1;
+  for (const t of layout.tags) left.set(t.id, t.x);
+  const scale = (kind: GraphEdge["kind"]) => {
+    const weights = drawn.filter((e) => e.kind === kind).map((e) => e.weight);
+    const min = Math.min(...weights);
+    return { min, span: Math.max(...weights) - min || 1 };
+  };
+  const co = scale("cooccurrence");
+  const tag = scale("tag");
   for (const e of drawn) {
     if (!left.has(e.source) || !left.has(e.target)) continue;
     const [source, target] = left.get(e.source)! <= left.get(e.target)! ? [e.source, e.target] : [e.target, e.source];
@@ -262,19 +282,21 @@ function buildEdges(drawn: GraphEdge[], layout: LayoutResult | null, kind: EdgeK
       style:
         e.kind === "hierarchy"
           ? { stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "4 4" }
-          : { stroke: "var(--muted-foreground)", strokeWidth: STROKE_MIN + ((STROKE_MAX - STROKE_MIN) * (e.weight - min)) / span, opacity: 0.6 },
+          : e.kind === "tag"
+            ? { stroke: "var(--muted-foreground)", strokeWidth: STROKE_MIN + ((TAG_STROKE_MAX - STROKE_MIN) * (e.weight - tag.min)) / tag.span, opacity: 0.25 }
+
+            : { stroke: "var(--muted-foreground)", strokeWidth: STROKE_MIN + ((STROKE_MAX - STROKE_MIN) * (e.weight - co.min)) / co.span, opacity: 0.6 },
     });
   }
   return edges;
 }
 
-/** The topics joined to `id` by edges of `kind`, heaviest first. */
-function relatedTo(graph: TopicGraph, id: string, kind: EdgeKind): Related[] {
+/** The nodes joined to `id`, heaviest first: the topics it co-occurs with
+ *  (for a tag, the topics it is on) and, for a topic, its tags. */
+function linkedTo(graph: TopicGraph, id: string): { topics: Linked[]; tags: Linked[] } {
   const byId = new Map(graph.nodes.map((n) => [n.id, n]));
   const other = (e: GraphEdge) => (e.source === id ? e.target : e.source);
-  return graph.edges
-    .filter((e) => e.kind === kind && (e.source === id || e.target === id) && byId.has(other(e)))
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, RELATED_MAX)
-    .map((e) => ({ topic: byId.get(other(e))!, weight: e.weight }));
+  const touching = graph.edges.filter((e) => (e.source === id || e.target === id) && byId.has(other(e))).sort((a, b) => b.weight - a.weight);
+  const pick = (kind: GraphEdge["kind"]) => touching.filter((e) => e.kind === kind).slice(0, LINKED_MAX).map((e) => ({ node: byId.get(other(e))!, weight: e.weight }));
+  return byId.get(id)?.kind === "tag" ? { topics: pick("tag"), tags: [] } : { topics: pick("cooccurrence"), tags: pick("tag") };
 }

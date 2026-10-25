@@ -88,26 +88,31 @@ export type Topic = {
  *  for the following page, present only while there is one. */
 export type TopicList = { data: Topic[]; total: number; next?: string };
 
-/** A node of the topic graph: a topic with its standing in the range. */
+/** A node of the topic graph: a topic with its standing in the range (its
+ *  cluster, root and severity mix), or one of the set's top tags (`kind`
+ *  "tag", id `tag:<tag>`, with how many summaries carry it). */
 export type GraphNode = {
   id: string;
+  kind: "topic" | "tag";
   label: string;
   parent_id?: string;
   parent_label?: string;
-  cluster_id: string;
-  cluster_label: string;
+  cluster_id?: string;
+  cluster_label?: string;
   count: number;
-  severity: Record<Severity, number>;
+  severity?: Record<Severity, number>;
 };
 
-/** How two topics relate: summaries carrying both (`cooccurrence`), tags
- *  they share (`tags`), or the root and its leaf (`hierarchy`). */
+/** How two nodes relate: summaries carrying both topics (`cooccurrence`), a
+ *  topic's summaries carrying a tag (`tag`, from the topic to the tag), or
+ *  the root and its leaf (`hierarchy`). */
 export type GraphEdge = {
   source: string;
   target: string;
   weight: number;
-  kind: "cooccurrence" | "tags" | "hierarchy";
+  kind: "cooccurrence" | "tag" | "hierarchy";
 };
+
 
 /** A cluster the topic pipeline formed, with how many summaries fall in it. */
 export type GraphCluster = { id: string; label: string; count: number };

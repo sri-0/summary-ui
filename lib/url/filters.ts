@@ -25,9 +25,6 @@ export type Group = (typeof GROUPS)[number];
 export const VIEWS = ["list", "cards"] as const;
 export type View = (typeof VIEWS)[number];
 
-/** Which edges the topic graph draws. */
-export const EDGE_KINDS = ["cooccurrence", "tags"] as const;
-export type EdgeKind = (typeof EDGE_KINDS)[number];
 
 /** The kinds of document the search index holds. */
 export const KINDS = ["text", "image", "video", "pdf"] as const;
@@ -46,14 +43,14 @@ export const filterParsers = {
   topics: parseAsArrayOf(parseAsString).withDefault([]),
   /** `key:value` attribute filters: any value within a key, every key. */
   attr: parseAsArrayOf(parseAsString).withDefault([]),
-  /** The one topic drilled into on the topics page, or selected in the graph. */
+  /** The one topic drilled into on the topics page, or the node (a topic, or
+   *  a `tag:<tag>`) selected in the graph. */
   topic: parseAsString,
   q: parseAsString,
   /** The summary open in the full-screen dialog. */
   open: parseAsString,
   group: parseAsStringLiteral(GROUPS).withDefault("severity"),
   view: parseAsStringLiteral(VIEWS).withDefault("list"),
-  edges: parseAsStringLiteral(EDGE_KINDS).withDefault("cooccurrence"),
   /** The document kinds the search page shows; none means every kind. */
   kind: parseAsArrayOf(parseAsStringLiteral(KINDS)).withDefault([]),
   /** The document open in the search page's dialog. */
@@ -101,7 +98,8 @@ export function useFilters() {
     q: state.q,
     kind: state.kind,
   };
-  return { filters, open: state.open, doc: state.doc, group: state.group, view: state.view, edges: state.edges, setFilters: setState };
+  return { filters, open: state.open, doc: state.doc, group: state.group, view: state.view, setFilters: setState };
+
 }
 
 /** Whether any facet filter or search is set (the range always is). */

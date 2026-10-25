@@ -275,18 +275,6 @@
   }
 }
 
-/* The frame. The sidebar and the shell header sit flat on --sidebar; the
-   page sits on a soft violet → cyan radial wash over the canvas. */
-[data-slot="sidebar-inset"] {
-  background-image:
-    radial-gradient(70% 55% at 0% 0%, color-mix(in oklch, var(--ai-from) 16%, transparent), transparent 70%),
-    radial-gradient(60% 55% at 100% 100%, color-mix(in oklch, var(--ai-to) 16%, transparent), transparent 70%);
-}
-.dark [data-slot="sidebar-inset"] {
-  background-image:
-    radial-gradient(70% 55% at 0% 0%, color-mix(in oklch, var(--ai-from) 14%, transparent), transparent 70%),
-    radial-gradient(60% 55% at 100% 100%, color-mix(in oklch, var(--ai-to) 12%, transparent), transparent 70%);
-}
 
 /* The primary button on the strong gradient; hover brightens it since its
    background colour sits under the image. */
